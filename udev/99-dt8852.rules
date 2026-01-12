@@ -1,0 +1,7 @@
+# udev rules for CEM DT-8852 sound level meter
+# Grants read and write access to members of the plugdev or dialout group.
+#
+# Common Silicon Labs CP210x USB-to-UART bridge:
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0660", GROUP="dialout", TAG+="uaccess"
+# Generic USB serial devices:
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="0660", GROUP="dialout", TAG+="uaccess"

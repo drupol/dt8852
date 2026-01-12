@@ -1,0 +1,21 @@
+[package]
+name = "dt8852"
+version = "0.1.0"
+edition = "2024"
+authors = ["Pol Dellaiera <pol.dellaiera@protonmail.com>"]
+description = "A driver and command-line tool for the CEM DT-8852 sound level meter"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/drupol/dt8852"
+homepage = "https://github.com/drupol/dt8852"
+keywords = ["dt8852", "sound-level-meter", "decibel", "serial", "spl"]
+categories = ["command-line-utilities", "hardware-support"]
+
+[dependencies]
+anyhow = "1.0.100"
+chrono = { version = "0.4.42", features = ["serde"] }
+clap = { version = "4.5.54", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serialport = "4.8.1"
+thiserror = "2.0.17"
