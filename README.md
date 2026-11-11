@@ -1,9 +1,9 @@
 # dt8852
 
-`dt8852` is a driver and command-line utility for the CEM DT-8852 sound level meter and compatible hardware.
+`dt8852` is a cross-platform Rust crate and command-line utility for the CEM DT-8852 sound level meter and compatible hardware.
 
 This programme reads live sound pressure level (SPL) data through a USB serial connection.
-It supports configuration of frequency weightings, time weightings, and measurement ranges.
+It supports configuration of frequency weightings, time weightings, measurement ranges, and hold modes.
 
 ![Live sound level measurement](resources/Screenshot_20261111_194942.jpg)
 
@@ -21,55 +21,74 @@ the noise issue remains unresolved... but that's another story.
 
 ## Supported Devices
 
-This programme supports sound level meters that share the same serial communication protocol:
+This programme supports sound level meters that share the same Silicon Labs CP2102 USB-to-UART bridge and serial communication protocol:
 
-- **CEM DT-8852**
-- **CEM DT-8851**
-- **Trotec SL400**
-- **Voltcraft SL-451**
-- **ATP SL-8852**
+- [CEM DT-8852](http://www.cem-instruments.com/en/Product/detail/id/1294) (OEM)
+- [CEM DT-8851](http://www.cem-instruments.com/en/Product/detail/id/1294) (same protocol, without internal data recording memory)
+- [Trotec SL400](https://en.trotec.com/shop/sl400-sound-level-meter.html)
+- [Voltcraft SL-451](https://www.conrad.com/en/p/voltcraft-sl-451-sound-level-meter-and-data-logger-31-5-hz-8-khz-105031.html)
+- ATP SL-8852
+- ... and various other rebranded variants.
 
-> **Note**: Switch on the meter and press the **Setup** button once.
+> [!NOTE]
+> Switch on the meter and press the **Setup** button once.
 > The meter must show the PC connection symbol on its display before communication can start.
 
 ## Features
 
-- Automatic serial port detection for USB-connected meters.
-- Read live sound pressure level values in decibels (dB).
-- Configure frequency weighting (dBA and dBC).
-- Configure time weighting (Fast and Slow).
-- Configure measurement decibel ranges (30–80 dB, 50–100 dB, 80–130 dB, and Auto).
-- Configure peak and minimum hold modes.
-- List connected serial ports automatically.
-- Export measurements in plain text, JSON, or Telegraf/InfluxDB line protocol.
-- Use as a standalone command-line tool or as a Rust library.
+- **Cross-platform**: Runs on Linux, macOS, and Windows.
+- **Automatic port detection**: Automatically locates connected USB sound level meters.
+- **Live SPL streaming**: Read live sound pressure level values in decibels (dB).
+- **Flexible output formats**: Export measurements in plain text, JSON, or Telegraf/InfluxDB line protocol.
+- **Full device configuration**:
+  - Frequency weighting (dBA and dBC).
+  - Time weighting (Fast and Slow).
+  - Measurement ranges (30–80 dB, 50–100 dB, 80–130 dB, and Auto 30–130 dB).
+  - Hold modes (Live, Maximum, and Minimum).
+  - Internal recording toggle.
+- **Library & CLI**: Can be used as a standalone command-line tool or integrated as a Rust crate.
 
 ## Installation
 
-Install the binary using Cargo:
+### From crates.io
 
 ```bash
+cargo install dt8852
+```
+
+### From Source
+
+Clone the repository and build or install locally using Cargo:
+
+```bash
+git clone https://github.com/drupol/dt8852.git
+cd dt8852
 cargo install --path .
 ```
 
-Or build the project locally:
+Or build a release binary:
 
 ```bash
 cargo build --release
 ```
 
-The compiled binary is located at `target/release/dt8852`.
+The compiled binary will be located at `target/release/dt8852`.
 
-### Device Permissions (Linux)
+## Device Drivers & Permissions
 
-Serial devices require appropriate user permissions.
+The meter communicates through an internal Silicon Labs CP2102 USB-to-UART bridge. Depending on your operating system, driver or permission configuration may be required:
+
+### Linux
+
+The kernel driver (`cp210x`) is included in modern Linux distributions, so no extra driver is needed. However, user permissions are required to access serial devices.
+
 Add your user account to the `dialout` group:
 
 ```bash
 sudo usermod -aG dialout "$USER"
 ```
 
-Log out and log in again to apply the group change.
+Log out and log back in to apply the change.
 
 Alternatively, install the provided udev rule:
 
@@ -79,14 +98,29 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
+### Windows
+
+Windows 10 and 11 usually detect the device and install the required driver automatically. If needed, the driver can be downloaded directly from [Silicon Labs CP210x VCP Drivers](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers).
+
+The device typically appears as `COM3` (or higher COM port).
+
+### macOS
+
+If not automatically detected, install the Virtual COM Port (VCP) driver from [Silicon Labs CP210x VCP Drivers](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers).
+
+The device typically appears as `/dev/cu.usbserial-*` or `/dev/tty.usbserial-*`.
+
 ## Usage
 
-The programme detects connected USB meters automatically.
-You can also specify a port explicitly with `--serial-port <PORT>`.
+The CLI automatically detects connected meters. You can also specify a port explicitly with `--serial-port <PORT>` (e.g. `--serial-port /dev/ttyUSB0` or `--serial-port COM3`).
+
+```bash
+dt8852 [OPTIONS] <COMMAND>
+```
 
 ### 1. Identify Connected Ports
 
-List all available serial ports:
+List all available serial ports and detect connected CP2102 devices:
 
 ```bash
 dt8852 list-ports
@@ -114,11 +148,21 @@ Or specify the serial port manually:
 dt8852 --serial-port /dev/ttyUSB0 live
 ```
 
-Increase verbosity to display timestamps:
+#### Verbosity Levels
+
+Use the `-v` flag to increase verbosity:
+
+- **Default (no flag)**: SPL values only (e.g. `45.2`)
+- **`-v`**: Timestamp and SPL (e.g. `2026-11-11 19:49:42.806,45.2`)
+- **`-vv`**: SPL per token received
+- **`-vvv`**: Timestamp and SPL per token
+- **`-vvvv`**: Raw decoded protocol tokens for debugging
 
 ```bash
 dt8852 live -v
 ```
+
+#### Output Formats
 
 Stream measurements formatted as JSON:
 
@@ -126,7 +170,7 @@ Stream measurements formatted as JSON:
 dt8852 live --format json
 ```
 
-Stream measurements formatted for Telegraf and InfluxDB:
+Stream measurements formatted for Telegraf / InfluxDB line protocol:
 
 ```bash
 dt8852 live --format telegraf
@@ -140,13 +184,25 @@ dt8852,frequency_weighting=dB(A),time_weighting=Fast,range_mode=30dB\ -\ 130dB\ 
 
 ### 3. Display Current Device Configuration
 
-Query the current device settings:
+Query the current device settings and status:
 
 ```bash
 dt8852 get-mode
 ```
 
-To output the configuration as JSON:
+Example output:
+
+```text
+current_time = 21:20:30
+current_spl = 42.1 dB
+frequency_weighting = dBA
+time_weighting = Fast
+range_mode = 30-130 dB (Auto)
+hold_mode = Live
+recording_mode = Not Recording
+```
+
+Output configuration formatted as JSON:
 
 ```bash
 dt8852 get-mode --format json
@@ -154,14 +210,18 @@ dt8852 get-mode --format json
 
 ### 4. Configure Device Parameters
 
-Set measurement parameters when starting live monitoring or independently:
+Reconfigure measurement parameters:
 
 ```bash
 # Set dBA frequency weighting and Slow time weighting
 dt8852 set-mode --freqweighting dba --timeweighting slow
 
-# Set 30-80 dB range with Max hold mode
+# Set 30–80 dB range with Max hold mode
 dt8852 set-mode --range R_30_80 --hold max
+
+# Start or stop internal data recording
+dt8852 set-mode --record recording
+dt8852 set-mode --record not-recording
 ```
 
 Available parameters:
@@ -172,13 +232,30 @@ Available parameters:
 - `--hold`: `live`, `min`, `max`
 - `--record`: `recording`, `not-recording`
 
+## Troubleshooting
+
+### The Clock Problem
+
+Besides the 9V battery, these meters contain an internal lithium coin cell to keep the real-time clock running when powered off. When this cell runs out, the clock stops or resets to `00:00:00`.
+
+You can replace the lithium cell (typically CR1220) by opening the device casing.
+
+After replacing the cell, if the clock is still frozen:
+
+1. Power on the device while holding down the **Setup** button.
+2. Repeatedly press **Setup** until `rSt` is displayed.
+3. Press **HOLD**.
+
+The device will reset its internal date and time.
+
 ## Rust Library Usage
 
-Add `dt8852` to your `Cargo.toml` dependencies:
+Add `dt8852` and `serialport` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-dt8852 = { path = "/path/to/dt8852" }
+dt8852 = "0.9"
+serialport = "4.8"
 ```
 
 Example code:
@@ -224,10 +301,10 @@ Verify formatting:
 cargo fmt --check
 ```
 
-## Acknowledgements
+## Acknowledgements & References
 
-This project was inspired by the Python [`dt8852`](https://pypi.org/project/dt8852/) package by Randy Simons
-(hosted on [Codeberg](https://codeberg.org/randysimons/dt8852)).
+- Original Python [`dt8852`](https://codeberg.org/randysimons/dt8852) package by **Randy Simons**.
+- Protocol and hardware details documented on the [Sigrok CEM DT-8852 wiki](https://sigrok.org/wiki/CEM_DT-8852).
 
 ## Licence
 
