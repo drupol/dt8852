@@ -25,9 +25,11 @@
           cargo
           clippy
           just
+          pkg-config
           rust-analyzer
           rustc
           rustfmt
+          udev
         ];
 
         shellHook = ''
