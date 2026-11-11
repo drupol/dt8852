@@ -1,6 +1,6 @@
 [package]
 name = "dt8852"
-version = "0.1.0"
+version = "0.9.1"
 edition = "2024"
 authors = ["Pol Dellaiera <pol.dellaiera@protonmail.com>"]
 description = "A driver and command-line tool for the CEM DT-8852 sound level meter"
