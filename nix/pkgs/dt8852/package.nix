@@ -8,7 +8,7 @@
 
 rustPlatform.buildRustPackage {
   pname = "dt8852";
-  version = "0.9.1";
+  version = "0.9.2";
 
   __structuredAttrs = true;
 
@@ -21,7 +21,7 @@ rustPlatform.buildRustPackage {
     ];
   };
 
-  cargoHash = "sha256-qRlDZaMALQ0hT22hDgvN4xV+zICXZRFtOurDa+mYxrA=";
+  cargoHash = "sha256-9ZnNDXlkWvi06Q/HtV/mFq4posHu5ALOnZHYboh4GTo=";
 
   nativeBuildInputs = [ pkg-config ];
 
